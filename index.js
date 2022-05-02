@@ -24,8 +24,8 @@ function arraysEqual(a, b) {
 const deasync = require('deasync');
 const sleep = ms => deasync.sleep(ms);
 
-//var readline = require('readline');
-//readline.emitKeypressEvents(process.stdin);
+var readline = require('readline');
+readline.emitKeypressEvents(process.stdin);
 var keypress = require('keypress');
 keypress(process.stdin);
 process.stdin.setRawMode(true);
@@ -48,7 +48,9 @@ var plrs = [`►`,`◄`,`▼`,`▲`];
 var plr = `◄`.blue;
 var enemy = `►`.red;
 var button = `▓`.brightGreen;
-var buttonpressed = [`▓`.red];
+var buttonpressed = `▓`.red;
+let buttonholder = '⬤';
+let buttonpressedholder = '◯';
 
 var wallchar = "█";
 var wallchars = {
@@ -466,10 +468,14 @@ String.prototype.mapXYi = function(xy) {
     return xy[0]-1+(xy[1]-1)*(w+1);
 }
 
+var buttonPositions = [];
+
 function generateFloor(fn) {
     console.clear();
+    let bplist = [];
     let roomCount = 10+Math.floor(Math.random()*7)+fn*Math.floor((Math.random()*3)+1);
-    let buttonCount = Math.floor(fn/4)+1;
+    let buttonCount = Math.floor(Math.random()*fn*2)+1;
+    console.log(buttonCount);
     Map = [];
     Map.push([[0,0],rooms[0],roomdata[0][0]]);
     let Data = [[0,0],roomdata[0][0]];
@@ -504,8 +510,12 @@ function generateFloor(fn) {
                 let tb = (t==3)&&2||((t==2)&&3||((t==1)&&0||((t==0)&&1||-1)))
                 if(randomRoom[1][0][tb]) {
                     Map.push([Placements[randomPlacement][0],randRoom,randomRoom[1][0]]);
+                    let buttonpos = randomRoom[1][2];
                     Data = [Placements[randomPlacement][0],randomRoom[1][0]];
                     let placementxy = Placements[randomPlacement][0];
+                    for(let j=0;j<buttonpos.length;j++) {
+                        bplist.push([placementxy,buttonpos[j]]);
+                    }
                     for(let j=0;j<Data[1].length;j++) {
                         let p = [[placementxy[0]+1,placementxy[1]],[placementxy[0]-1,placementxy[1]],[placementxy[0],placementxy[1]+1],[placementxy[0],placementxy[1]-1]];
                         if(Data[1][j] && Map.findIndex((e) => arraysEqual(e[0],p[j])) == -1) {
@@ -577,7 +587,12 @@ function generateFloor(fn) {
             maxxy[1] = v[0][1];
         }
     }
-    let breaker = '\n';
+    for(let i=0;i<bplist.length;i++) {
+        let placxy = bplist[i][0];
+        let buttonxy = bplist[i][1];
+        let absrxy = [placxy[0]-minxy[0],placxy[1]-minxy[1]];
+        buttonPositions.push([absrxy[0]*roomwidth+buttonxy[0],absrxy[1]*roomwidth+buttonxy[1]]);
+    }
     let Maplines = [];
     for(let i=0;i<(maxxy[1]-minxy[1]+1)*roomheight;i++) {
         let mapline = ' '.repeat((maxxy[0]-minxy[0]+1)*roomwidth)+`
@@ -623,8 +638,13 @@ function generateFloor(fn) {
     maph = Math.ceil(Mapstring.length/(mapw+1));
     let spawn = roomdata[0][1][Math.floor(Math.random()*7)]
     pxy = [spawn[0]-minxy[0]*17,spawn[1]-minxy[1]*17];
-    
-    return wallroom(Mapstring);
+
+    let wallst = wallroom(Mapstring);
+    for(let i=0;i<buttonCount;i++) {
+        let rbPos = buttonPositions[Math.floor(Math.random()*buttonPositions.length)];
+        wallst = wallst.substring(0,Mapstring.mapXYi(rbPos)-1)+buttonholder+wallst.substring(Mapstring.mapXYi(rbPos));
+    }
+    return wallst;
     //return Mapstring;
 }
 var currentMap = generateFloor(1);
@@ -661,16 +681,16 @@ String.prototype.renderBox = function(xya,xyb,shift) {
 
 var rend = currentMap.renderBox(box[0],box[1],box[2])
 
-/*
-rl.on('line', (input) => {
+
+process.stdin.on('line', (input) => {
 	if(input==="start" || input==="ssttaarrtt") {
         currentRoom = wallroom(rooms[0]);
         box = getBox(pxy,8);
         rend = currentMap.renderBox(box[0],box[1],box[2])
-        console.log(rend);
+        console.log(rend.replace(buttonholder,button).replace(buttonpressedholder,buttonpressed));
 	}
 });
-*/
+
 
 function up() {
     ppxy = [...pxy];
@@ -678,7 +698,7 @@ function up() {
     console.clear();
     box = getBox(pxy,16);
     rend = currentMap.addObject(plr,[17,17]);
-    console.log(rend);
+    console.log(rend.replace(buttonholder,button).replace(buttonpressedholder,buttonpressed));
 }
 
 function right() {
@@ -687,7 +707,7 @@ function right() {
     console.clear();
     box = getBox(pxy,16); 
     rend = currentMap.addObject(plr,[17,17]);
-    console.log(rend);
+    console.log(rend.replace(buttonholder,button).replace(buttonpressedholder,buttonpressed));
 }
 
 function down() {
@@ -696,7 +716,7 @@ function down() {
     console.clear();
     box = getBox(pxy,16); 
     rend = currentMap.addObject(plr,[17,17]);
-    console.log(rend);
+    console.log(rend.replace(buttonholder,button).replace(buttonpressedholder,buttonpressed));
 }
 
 function left() {
@@ -705,41 +725,46 @@ function left() {
     console.clear();
     box = getBox(pxy,16); 
     rend = currentMap.addObject(plr,[17,17]);
-    console.log(rend);
+    console.log(rend.replace(buttonholder,button).replace(buttonpressedholder,buttonpressed));
 }
 
-const GetKeyState = require("getkeystate");
-
 process.stdin.on('keypress', db(function (ch, k) {
-    if(!(GetKeyState(0x57)||GetKeyState(0x41)||GetKeyState(0x53)||GetKeyState(0x44)||GetKeyState(0x25)||GetKeyState(0x26)||GetKeyState(0x27)||GetKeyState(0x28))) {
-        return;
-    }
     let key = k.name;
     //if(!started){return};
     if((key == 'up' || key == 'w')) {
         plr = plrs[3].blue;
-        db(up(),250,true);
+        up();
     }
+},200,true,true));
+
+process.stdin.on('keypress', db(function (ch, k) {
+    let key = k.name;
+    //if(!started){return};
     if((key == 'right' || key == 'd')) {
         plr = plrs[0].blue;
-        db(right(),250,true);
+        right();
     }
+},200,true,true));
+
+process.stdin.on('keypress', db(function (ch, k) {
+    let key = k.name;
+    //if(!started){return};
     if((key == 'down' || key == 's')) {
         plr = plrs[2].blue;
-        db(down(),250,true);
+        down();
     }
+},200,true,true));
+
+process.stdin.on('keypress', db(function (ch, k) {
+    let key = k.name;
+    //if(!started){return};
     if((key == 'left' || key == 'a')) {
         plr = plrs[1].blue;
-        db(left(),250,true);
+        left();
     }
-},200,true));
+},200,true,true));
 
 
 console.log(`Terminal Decendance v0.6 INFDEV
 
 welcome! type "start" in the console to start.`);
-
-process.stdin.on('keypress', (charater, key) => {
-  console.log(charater)
-  console.log(key)
-})
